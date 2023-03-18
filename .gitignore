@@ -1,0 +1,9 @@
+/.vs
+csv_parser.sln
+/csv_parser/*.vcxproj
+/csv_parser/*.filters
+/csv_parser/*.user
+/csv_parser/x64/Debug
+/x64/Debug
+/*.csv
+/csv_parser/*.csv

@@ -9,6 +9,8 @@
 #include <initializer_list>
 #include "print_var_name_str.h"
 #include <cassert>
+#include <chrono>
+#include <ctime>
 
 template<typename T>
 class CSVParser
@@ -33,6 +35,31 @@ private:
 		}
 	}
 
+	std::string generate_datetime_string()
+	{
+		time_t now = time(0);
+		tm datetime;
+		localtime_s(&datetime, &now);
+
+		int year = 1900 + datetime.tm_year;
+		int month = 1 + datetime.tm_mon;
+		int day = datetime.tm_mday;
+		int hour = datetime.tm_hour;
+		int minute = datetime.tm_min;
+		int second = datetime.tm_sec;
+
+		char year_s[5], month_s[3], day_s[3], hour_s[3], minute_s[3], second_s[3];
+		sprintf_s(year_s, 5, "%04d", year);
+		sprintf_s(month_s, 3, "%02d", month);
+		sprintf_s(day_s, 3, "%02d", day);
+		sprintf_s(hour_s, 3, "%02d", hour);
+		sprintf_s(minute_s, 3, "%02d", minute);
+		sprintf_s(second_s, 3, "%02d", second);
+
+		std::string data_time = "_" + std::string(year_s) + "_" + std::string(month_s) + "_" + std::string(day_s) + "_" + std::string(hour_s) + "_" + std::string(minute_s) + "_" + std::string(second_s);
+
+		return data_time;
+	}
 
 public:
 	/*******************************************************************
@@ -41,12 +68,17 @@ public:
 	CSVParser() = delete;
 
 	// the constructor being used
-	CSVParser(std::initializer_list<std::vector<T>> data_value, std::initializer_list<std::string> data_name, std::string f = "test.csv")
+	CSVParser(std::initializer_list<std::vector<T>> data_value, std::initializer_list<std::string> data_name, std::string f = "test", bool auto_add_datetime_flag = true)
 	{
 		assert(data_value.size() == data_name.size());
 
-		// file name
-		_filename = f;
+		// file name + date + time
+		std::string ymdhms("");
+		if (auto_add_datetime_flag)
+		{
+			ymdhms = generate_datetime_string();
+		}
+		_filename = f + ymdhms + ".csv";
 
 		// column names
 		for (const auto& i : data_name)
@@ -121,7 +153,4 @@ public:
 		// disconnect file
 		myFile.close();
 	}
-
-
 };
-

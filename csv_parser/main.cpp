@@ -4,32 +4,61 @@
 #include <chrono>
 #include "print_var_name_str.h"
 #include "CSVParser.hpp"
+#include <filesystem>
+#include <algorithm>
+#include <iomanip>
 
 int main()
 {
+	// Time when the program starts executing
 	auto t_start = std::chrono::steady_clock::now();
 
-	std::string input_folder = "Input";
-	std::string output_folder = "Output";
+	// Settings of the input & output folder
+	std::string input_folder = "Input\\Test";
+	std::string output_folder = "Output\\Test";
+	std::filesystem::path input_path{ input_folder };
+	std::filesystem::path output_path{ output_folder };
+
+	/*********************************************************************************
+	*Test the function of reading csv file
+	**********************************************************************************/
+	int file_num = 0;
+	std::cout << "Iterating the input folder: " << input_path.string() << std::endl;
+
+	// Iteration over the input folder
+	for (const auto& ith_file : std::filesystem::directory_iterator{ input_path })
+	{
+		// Display file info
+		std::cout << "File " << std::setw(4) << std::setfill('0') << ++file_num << ": "
+			<< ith_file.path().filename().string() << std::endl;
+
+		// Read csv file
+		CSVParser<double> file_in;
+		auto T = file_in.readTable(ith_file.path().string());
+
+		// Do something with the dataset, e.g.
+		std::cout << "Dispaly an entry\n";
+		std::cout << "T.v1(0) = " << T.at("v1").at(0) << std::endl;
+	}
+
+
+	/*********************************************************************************
+	*Test the function of writing csv file
+	**********************************************************************************/
+
+	// Suppose these are the variables you want to save into csv files
 	std::vector<int> v1{ 10,20,30 };
 	std::vector<int> v2({ 100,200,300 });
-	std::vector<int> v3{ 1000,2000,3000 };
-	CSVParser<int> cc1({ v1,v2 }, { "v1","v2" });
-	CSVParser<int> cc2({ v1,v3 }, { "v1","v3" });
-	cc1.writeTable();
-	cc2.writeTable("myTest", false);
-	auto data3 = cc2.readTable("myTest");
-	std::cout << data3.at("v1").at(0) << std::endl;
+	std::string out_full_path_name = output_folder + "\\Sample_output.csv";
 
+	// Write the data above into a csv file
+	CSVParser<int> file_out({ v1,v2 }, { "v1","v2" });
+	file_out.writeTable(out_full_path_name);
 
-	/*-----*/
-
-	// TO DO...
-	// Add date + time to file name
-	// Add iteration over files in a folder
-
+	// Time when the program ends
 	auto t_end = std::chrono::steady_clock::now();
 	std::chrono::duration<double> elapsed_seconds = t_end - t_start;
-	std::cout << std::setprecision(3) << "elapsed time: " << elapsed_seconds.count() << "s\n";
+	std::cout << std::setprecision(3) << "\n\n\nelapsed time: " << elapsed_seconds.count() << "s\n";
+
 	return 0;
 }

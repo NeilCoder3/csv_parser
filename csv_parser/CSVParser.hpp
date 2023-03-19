@@ -24,17 +24,18 @@
 #include <chrono>
 #include <ctime>
 #include <sstream>
+#include <filesystem>
 
 template<typename T>
 class CSVParser
 {
 private:
-	std::string _filename;
+	std::string _full_file_name;
 	std::vector<std::string> _col_names;
 	std::vector<std::vector<T>> _data_vecs;
 	std::map < std::string, std::vector<T>> _table_dataset;
-	size_t _m_rows;
-	size_t _n_cols;
+	size_t _m_rows{ 0 };
+	size_t _n_cols{ 0 };
 
 	/*******************************************************************
 	* Private functions
@@ -80,12 +81,22 @@ private:
 	// clear the private variables and set to default
 	void clear()
 	{
-		_filename = "";
+		_full_file_name = "";
 		_col_names.clear();
 		_data_vecs.clear();
 		_table_dataset.clear();
 		_m_rows = 0;
 		_n_cols = 0;
+	}
+
+	// create the output folder it doesn't exist
+	void initOutFolder()
+	{
+		std::filesystem::path p{ _full_file_name };
+		if (!std::filesystem::exists(p.parent_path()))
+		{
+			std::filesystem::create_directories(p.parent_path());
+		}
 	}
 public:
 	/*******************************************************************
@@ -124,7 +135,7 @@ public:
 	**********************************************************************/
 
 	// write data into a csv file where the first row stores the column names
-	void writeTable(std::string f = "test", bool auto_add_datetime_flag = true)
+	void writeTable(std::string f = "test_write.csv", bool auto_add_datetime_flag = true)
 	{
 		// file name + date + time
 		std::string ymdhms{};
@@ -132,14 +143,18 @@ public:
 		{
 			ymdhms = generate_datetime_string();
 		}
-		_filename = f + ymdhms + ".csv";
+		f.erase(f.end() - 4, f.end()); // remove the extension ".csv"
+		_full_file_name = f + ymdhms + ".csv";
+
+		// initialize the output folder
+		initOutFolder();
 
 		// create an output filestream object
-		std::ofstream fout(_filename);
+		std::ofstream fout(_full_file_name);
 		if (!fout.is_open())
 		{
 			fout.clear();
-			std::cerr << "Could not open " << _filename << std::endl;
+			std::cerr << "Could not open " << _full_file_name << std::endl;
 			std::exit(EXIT_FAILURE);
 		}
 
@@ -181,14 +196,14 @@ public:
 		clear();
 
 		// set file name to the private variable
-		_filename = f + ".csv";
+		_full_file_name = f;
 
 		// create an input filestream object
-		std::ifstream fin(_filename);
+		std::ifstream fin(_full_file_name);
 		if (!fin.is_open())
 		{
 			fin.clear();
-			std::cerr << "Could not open " << _filename << std::endl;
+			std::cerr << "Could not open " << _full_file_name << std::endl;
 			std::exit(EXIT_FAILURE);
 		}
 
@@ -268,4 +283,8 @@ public:
 	{
 		return _table_dataset;
 	}
+
+	size_t getNumRows() { return _m_rows; }
+
+	size_t getNumCols() { return _n_cols; }
 };

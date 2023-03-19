@@ -1,3 +1,15 @@
+/**
+ * @file CSVParser.hpp
+ * @author neilblue2011@hotmail.com
+ * @brief This is a class designed to read csv files and to write the dataset into csv files
+ * @version 0.1
+ * @date 2023-03-19 (YYYY-MM-DD)
+ *
+ * @copyright Copyright (c) 2023
+ *
+ */
+
+
 #pragma once
 #include <string>
 #include <fstream>
@@ -7,10 +19,11 @@
 #include <map> // std::map
 #include <string>
 #include <initializer_list>
-#include "print_var_name_str.h"
+#include "print_var_name_str.h" // it's not used at the moment
 #include <cassert>
 #include <chrono>
 #include <ctime>
+#include <sstream>
 
 template<typename T>
 class CSVParser
@@ -19,22 +32,25 @@ private:
 	std::string _filename;
 	std::vector<std::string> _col_names;
 	std::vector<std::vector<T>> _data_vecs;
-	std::map < std::string, std::vector<T>> _dataset;
+	std::map < std::string, std::vector<T>> _table_dataset;
 	size_t _m_rows;
 	size_t _n_cols;
 
 	/*******************************************************************
 	* Private functions
 	********************************************************************/
+
+	// set _table_dataset using the other private variables
 	void map_colname_with_data()
 	{
 		size_t N = _col_names.size();
 		for (size_t i = 0; i < N; i++)
 		{
-			_dataset[_col_names.at(i)] = _data_vecs.at(i);
+			_table_dataset[_col_names.at(i)] = _data_vecs.at(i);
 		}
 	}
 
+	// obtain the current time (Year-Month-Date-Hour-Minute-Second) and convert it to strings
 	std::string generate_datetime_string()
 	{
 		time_t now = time(0);
@@ -61,24 +77,27 @@ private:
 		return data_time;
 	}
 
+	// clear the private variables and set to default
+	void clear()
+	{
+		_filename = "";
+		_col_names.clear();
+		_data_vecs.clear();
+		_table_dataset.clear();
+		_m_rows = 0;
+		_n_cols = 0;
+	}
 public:
 	/*******************************************************************
 	* Constructors & Destructors
 	********************************************************************/
-	CSVParser() = delete;
+	CSVParser() = default;
+	virtual ~CSVParser() = default;
 
-	// the constructor being used
-	CSVParser(std::initializer_list<std::vector<T>> data_value, std::initializer_list<std::string> data_name, std::string f = "test", bool auto_add_datetime_flag = true)
+	// a constructor used before calling writeTable()
+	CSVParser(std::initializer_list<std::vector<T>> data_value, std::initializer_list<std::string> data_name)
 	{
 		assert(data_value.size() == data_name.size());
-
-		// file name + date + time
-		std::string ymdhms("");
-		if (auto_add_datetime_flag)
-		{
-			ymdhms = generate_datetime_string();
-		}
-		_filename = f + ymdhms + ".csv";
 
 		// column names
 		for (const auto& i : data_name)
@@ -100,57 +119,153 @@ public:
 		_n_cols = _data_vecs.size();
 	}
 
-	~CSVParser() {};
-
-	/*********************************************************************
-	* Setters & Getters
-	**********************************************************************/
-
-
 	/*********************************************************************
 	* Major functions
 	**********************************************************************/
 
-	// write data into csv file where the first row stores the column names
-	void writeTable() const
+	// write data into a csv file where the first row stores the column names
+	void writeTable(std::string f = "test", bool auto_add_datetime_flag = true)
 	{
-		// Create an output filestream object
-		std::ofstream myFile(_filename);
-		if (!myFile.is_open())
+		// file name + date + time
+		std::string ymdhms{};
+		if (auto_add_datetime_flag)
 		{
-			myFile.clear();
+			ymdhms = generate_datetime_string();
+		}
+		_filename = f + ymdhms + ".csv";
+
+		// create an output filestream object
+		std::ofstream fout(_filename);
+		if (!fout.is_open())
+		{
+			fout.clear();
 			std::cerr << "Could not open " << _filename << std::endl;
+			std::exit(EXIT_FAILURE);
 		}
 
-		// Send column names to the stream
+		// send column names to the stream
 		for (auto ith_col = _col_names.begin(); ith_col != _col_names.end(); ith_col++)
 		{
-			myFile << *ith_col;
-			if (ith_col != _col_names.end())
-			{
-				myFile << ","; // no commat at the end of the line
-			}
+			fout << *ith_col;
+			fout << ",";
 		}
-		myFile << "\n";
+		// no comma at the end of the line
+		fout.seekp(-1, std::ios::cur);
+		fout << "\n";
 
-		//Send data to the stream
+		// send data to the stream
 		for (size_t r = 0; r < _m_rows; r++)
 		{
 			for (size_t c = 0; c < _n_cols; c++)
 			{
-				myFile << _data_vecs[c][r];
+				fout << _data_vecs[c][r];
 				if (c != _n_cols - 1)
 				{
-					myFile << ",";
+					fout << ",";
 				}
 			}
-			myFile << "\n";
+			fout << "\n";
 		}
 
 		// needed for some implementations
-		myFile.clear();
+		fout.clear();
 
 		// disconnect file
-		myFile.close();
+		fout.close();
+	}
+
+	// read data from a csv file where the first row stores the column names; store the result into _table_dataset
+	std::map < std::string, std::vector<T>> readTable(const std::string& f)
+	{
+		// set private variables to their default values
+		clear();
+
+		// set file name to the private variable
+		_filename = f + ".csv";
+
+		// create an input filestream object
+		std::ifstream fin(_filename);
+		if (!fin.is_open())
+		{
+			fin.clear();
+			std::cerr << "Could not open " << _filename << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+
+		// helper variables
+		std::string ith_line, col_name;
+		T val{};
+
+		/* Read the column names ---------------------------------------*/
+		// read the first line and save it into column names
+		std::getline(fin, ith_line);
+
+		// create a string stream to further parse the 1st line
+		std::stringstream ss(ith_line);
+
+		// extract each column name
+		while (std::getline(ss, col_name, ','))
+		{
+			_col_names.push_back(col_name);
+		}
+
+		// get the number of columns
+		_n_cols = _col_names.size();
+
+		// allocate space for the data
+		_data_vecs.resize(_n_cols);
+
+		/* Read data-----------------------------------------------------*/
+		// iterate over each line
+		while (std::getline(fin, ith_line))
+		{
+			// associate a stingstream to the strings of the current line
+			ss = std::stringstream(ith_line);
+
+			// keep track of the current column index
+			int ith_col = 0;
+
+			// extract each data
+			while (ss >> val)
+			{
+				// add the current number to the end of the "ith_col" column
+				_data_vecs.at(ith_col).push_back(val);
+
+				// check the next token
+				if (ss.peek() == ',')
+				{
+					// if the token is comma, discard it from the stream
+					ss.ignore();
+				}
+
+				// increament the column index
+				ith_col++;
+			}
+		}
+
+		// get the number of rows
+		_m_rows = _data_vecs.at(0).size();
+
+		// equal number of names and data
+		assert(_data_vecs.size() == _col_names.size());
+
+		// needed for some implementations
+		fin.clear();
+
+		// disconnect file
+		fin.close();
+
+		// construct the output
+		map_colname_with_data();
+
+		return _table_dataset;
+	}
+
+	/*********************************************************************
+	* Setters & Getters
+	**********************************************************************/
+	std::map < std::string, std::vector<T>> getTable()
+	{
+		return _table_dataset;
 	}
 };

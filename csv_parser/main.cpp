@@ -7,15 +7,19 @@
 
 int main()
 {
-	char aa[] = "fs";
-	std::string s_aa(aa);
 	auto t_start = std::chrono::steady_clock::now();
-	/*TEST*/
-	std::string f_name = "Test0";
+
+	std::string input_folder = "Input";
+	std::string output_folder = "Output";
 	std::vector<int> v1{ 10,20,30 };
 	std::vector<int> v2({ 100,200,300 });
-	CSVParser<int> cc({ v1,v2 }, { "v1","v2" }, f_name);
-	cc.writeTable();
+	std::vector<int> v3{ 1000,2000,3000 };
+	CSVParser<int> cc1({ v1,v2 }, { "v1","v2" });
+	CSVParser<int> cc2({ v1,v3 }, { "v1","v3" });
+	cc1.writeTable();
+	cc2.writeTable("myTest", false);
+	auto data3 = cc2.readTable("myTest");
+	std::cout << data3.at("v1").at(0) << std::endl;
 
 
 	/*-----*/

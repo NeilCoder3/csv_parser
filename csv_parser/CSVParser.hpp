@@ -25,6 +25,7 @@
 #include <ctime>
 #include <sstream>
 #include <filesystem>
+#include <cassert>
 
 template<typename T>
 class CSVParser
@@ -239,30 +240,30 @@ public:
 
 			// keep track of the current column index
 			int ith_col = 0;
+			std::string val_str;
 
-			// extract each data
-			while (ss >> val)
+			// extract every comma-separated string
+			while (std::getline(ss,val_str,','))
 			{
+				// convert string to number
+				val = T(std::stod(val_str));
+
 				// add the current number to the end of the "ith_col" column
 				_data_vecs.at(ith_col).push_back(val);
-
-				// check the next token
-				if (ss.peek() == ',')
-				{
-					// if the token is comma, discard it from the stream
-					ss.ignore();
-				}
 
 				// increament the column index
 				ith_col++;
 			}
+
+			// further check
+			assert(ith_col == _n_cols && "Unequal column number due to early termination of reading a row");
 		}
 
 		// get the number of rows
 		_m_rows = _data_vecs.at(0).size();
 
 		// equal number of names and data
-		assert(_data_vecs.size() == _col_names.size());
+		assert(_data_vecs.size() == _col_names.size() && "Mismatched number of column names and column dataset");
 
 		// needed for some implementations
 		fin.clear();

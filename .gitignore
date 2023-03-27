@@ -7,3 +7,4 @@ csv_parser.sln
 /x64/Debug
 /*.csv
 /csv_parser/*.csv
+/csv_parser/Output

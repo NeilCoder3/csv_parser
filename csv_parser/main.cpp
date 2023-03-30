@@ -10,6 +10,9 @@
 
 int main()
 {
+	// Write a line to display the name of the current folder
+	std::cout << "\n\n\nThe current working folder is: " << std::filesystem::current_path().string() << std::endl;
+
 	// Time when the program starts executing
 	auto t_start = std::chrono::steady_clock::now();
 
